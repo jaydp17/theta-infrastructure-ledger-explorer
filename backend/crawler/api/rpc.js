@@ -157,6 +157,8 @@ var processHttpRequest = function (host, port, method, path, requestBody, callba
     });
 
     const timeout = config.request_timeout_ms || 10000
+    console.log(`********config.request_timeout_ms = ${config.request_timeout_ms}`)
+    console.log(`********timeout = ${timeout}`)
     req.setTimeout(timeout, function () {
       req.abort();
       callback('Request Timeout: ' + path, null);
