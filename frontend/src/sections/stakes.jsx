@@ -3,7 +3,6 @@ import get from 'lodash/get';
 
 import { Link } from 'react-router-dom';
 import { stakeService } from 'common/services/stake';
-import { rewardDistributionService } from 'common/services/rewardDistribution';
 import ThetaChart from 'common/components/chart';
 import { sumCoin } from 'common/helpers/utils';
 import StakesTable from "../common/components/stakes-table";
@@ -20,31 +19,16 @@ export default class Stakes extends React.Component {
       holders: [],
       percentage: [],
       sortedStakesByHolder: [],
-      sortedStakesBySource: [],
-      rewardMap: {}
+      sortedStakesBySource: []
     };
   }
 
   componentDidMount() {
-    this.getAllRewardDistribution()
+    this.getAllStakes();
   }
 
-  getAllRewardDistribution() {
-    rewardDistributionService.getAllRewardDistribution()
-      .then(res => {
-        const list = get(res, 'data.body')
-        let map = new Map();
-        list.forEach(s => {
-          map.set(s._id, s.splitBasisPoint)
-        })
-        this.setState({ rewardMap: map });
-        this.getAllStakes(map);
-      }).catch(err => {
-        console.log(err)
-      })
-  }
-
-  getAllStakes(map) {
+  
+  getAllStakes() {
     const types = this.props.stakeCoinType === 'tfuel' ? ['eenp'] : ['vcp', 'gcp'];
     stakeService.getAllStake(types)
       .then(res => {
@@ -70,8 +54,7 @@ export default class Stakes extends React.Component {
           return map;
         }, {});
         let sortedStakesByHolder = Array.from(Object.keys(holderObj), key => {
-          const splitBasisPoint = map.get(key) || 0;
-          return { 'holder': key, 'amount': holderObj[key].amount, 'type': holderObj[key].type, "splitBasisPoint": splitBasisPoint }
+          return { 'holder': key, 'amount': holderObj[key].amount, 'type': holderObj[key].type }
         }).sort((a, b) => {
           return b.amount - a.amount
         })
@@ -120,10 +103,10 @@ export default class Stakes extends React.Component {
           <div className="stake-switch-container">
             STAKED TOKEN
             <Link to={stakeCoinType === 'theta' ? "/stakes/tfuel" : "/stakes/theta"}>
-              <label className="stake-switch">
-                <input type="checkbox" className="checkbox" defaultChecked={stakeCoinType === 'tfuel'} />
-                <span className="slider"></span>
-              </label>
+            <label className="stake-switch">
+              <input type="checkbox" className="checkbox" defaultChecked={stakeCoinType === 'tfuel'} />
+              <span className="slider"></span>
+            </label>
             </Link>
           </div>
         </div>

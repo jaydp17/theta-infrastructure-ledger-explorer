@@ -13,7 +13,6 @@ import { accountService } from 'common/services/account';
 import { transactionsService } from 'common/services/transaction';
 import { stakeService } from 'common/services/stake';
 import { priceService } from 'common/services/price';
-import { rewardDistributionService } from 'common/services/rewardDistribution';
 import TransactionTable from "common/components/transactions-table";
 import Pagination from "common/components/pagination";
 import NotExist from 'common/components/not-exist';
@@ -48,9 +47,7 @@ export default class AccountDetails extends React.Component {
       isDownloading: false,
       hasRefreshBtn: false,
       selectedTypes: TypeOptions.filter(obj => obj.value !== '5'),
-      typeOptions: null,
-      rewardSplit: 0,
-      beneficiary: ""
+      typeOptions: null
     };
     this.downloadTrasanctionHistory = this.downloadTrasanctionHistory.bind(this);
     this.download = React.createRef();
@@ -71,7 +68,7 @@ export default class AccountDetails extends React.Component {
   }
   componentDidUpdate(preProps) {
     if (preProps.match.params.accountAddress !== this.props.match.params.accountAddress) {
-      this.setState({ hasOtherTxs: true, includeService: false, rewardSplit: 0, beneficiary: "" })
+      this.setState({ hasOtherTxs: true, includeService: false })
       this.fetchData(this.props.match.params.accountAddress);
     }
   }
@@ -87,16 +84,6 @@ export default class AccountDetails extends React.Component {
     } else {
       this.setState({ errorType: 'invalid_address' })
     }
-  }
-  getSplitPercent(address) {
-    rewardDistributionService.getRewardDistributionByAddress(address)
-      .then(res => {
-        let rewardSplit = get(res, 'data.body.splitBasisPoint') || 0;
-        let beneficiary = get(res, 'data.body.beneficiary') || "";
-        this.setState({ rewardSplit, beneficiary })
-      }).catch(err => {
-        console.log(err)
-      })
   }
   getPrices(counter = 0) {
     priceService.getAllprices()
@@ -137,9 +124,6 @@ export default class AccountDetails extends React.Component {
           if (tx.type === 'eenp') tfuelSourceTxs.push(tx)
           else thetaSourceTxs.push(tx);
         })
-        if (thetaHolderTxs.length > 0 || tfuelHolderTxs.length > 0) {
-          this.getSplitPercent(address);
-        }
         this.setState({
           thetaHolderTxs,
           thetaSourceTxs,
@@ -325,7 +309,7 @@ export default class AccountDetails extends React.Component {
     const { account, transactions, currentPage, totalPages, errorType, loading_txns,
       includeService, hasOtherTxs, hasThetaStakes, hasTfuelStakes, thetaHolderTxs, hasDownloadTx, thetaSourceTxs,
       tfuelHolderTxs, tfuelSourceTxs, price, hasStartDateErr, hasEndDateErr, isDownloading,
-      hasRefreshBtn, typeOptions, rewardSplit, beneficiary } = this.state;
+      hasRefreshBtn, typeOptions } = this.state;
     return (
       <div className="content account">
         <div className="page-title account">Account Detail</div>
@@ -344,9 +328,6 @@ export default class AccountDetails extends React.Component {
               <tbody>
                 <DetailsRow label="Balance" data={<Balance balance={account.balance} price={price} />} />
                 <DetailsRow label="Sequence" data={account.sequence} />
-                {((hasThetaStakes && thetaHolderTxs.length > 0) || (hasTfuelStakes && tfuelHolderTxs.length > 0)) &&
-                  <DetailsRow label="Reward Split" data={rewardSplit / 100 + '%'} />}
-                {rewardSplit !== 0 && <DetailsRow label="Beneficiary" data={<Address hash={beneficiary} />} />}
               </tbody>
             </table>
           </React.Fragment>}
@@ -445,7 +426,7 @@ const Balance = ({ balance, price }) => {
 }
 
 const Address = ({ hash }) => {
-  return (<Link to={`/account/${hash}`}>{hash}</Link>)
+  return (<Link to={`/account/${hash}`} target="_blank">{hash}</Link>)
 }
 
 const HashList = ({ hashes }) => {

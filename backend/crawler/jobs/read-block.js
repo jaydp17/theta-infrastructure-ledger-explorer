@@ -1,12 +1,10 @@
 var rpc = require('../api/rpc.js');
 var accountHelper = require('../helper/account');
 var stakeHelper = require('../helper/stake');
-var rewardHelper = require('../helper/reward-distribution');
 var txHelper = require('../helper/transactions');
 var fs = require('fs');
 var Logger = require('../helper/logger');
 const { createIndexes } = require('../helper/utils');
-const { updateRewardDistributions } = require('../helper/reward-distribution.js');
 
 //------------------------------------------------------------------------------
 //  Global variables
@@ -23,7 +21,6 @@ var stakeDao = null;
 var checkpointDao = null;
 var smartContractDao = null;
 var dailyAccountDao = null;
-var rewardDistributionDao = null;
 var maxBlockPerCrawl;
 var targetCrawlHeight;
 var txsCount = 0;
@@ -42,7 +39,7 @@ var startTime;
 //------------------------------------------------------------------------------
 exports.Initialize = function (progressDaoInstance, blockDaoInstance, transactionDaoInstance, accountDaoInstance,
   accountTxDaoInstance, stakeDaoInstance, checkpointDaoInstance, smartContractDaoInstance, dailyAccountDaoInstance,
-  rewardDistributionDaoInstance, stakeHistoryDaoInstance, cacheEnabledConfig, maxBlockPerCrawlConfig) {
+  stakeHistoryDaoInstance, cacheEnabledConfig, maxBlockPerCrawlConfig) {
   blockDao = blockDaoInstance;
   progressDao = progressDaoInstance;
   transactionDao = transactionDaoInstance;
@@ -52,7 +49,6 @@ exports.Initialize = function (progressDaoInstance, blockDaoInstance, transactio
   checkpointDao = checkpointDaoInstance;
   smartContractDao = smartContractDaoInstance;
   dailyAccountDao = dailyAccountDaoInstance;
-  rewardDistributionDao = rewardDistributionDaoInstance;
   stakeHistoryDao = stakeHistoryDaoInstance;
   cacheEnabled = cacheEnabledConfig;
   maxBlockPerCrawl = Number(maxBlockPerCrawlConfig);
@@ -109,7 +105,6 @@ exports.Execute = async function (network_id) {
 
         var getBlockAsyncList = [];
         var getStakeAsyncList = [];
-        var getRewardAsyncList = [];
         for (var i = crawledBlockHeightProgress + 1; i <= targetCrawlHeight; i++) {
           if (i % 10000 === 0) {
             stakeBlockHeight = i;
@@ -119,9 +114,8 @@ exports.Execute = async function (network_id) {
           getStakeAsyncList.push(rpc.getVcpByHeightAsync([{ 'height': i.toString() }]));
           getStakeAsyncList.push(rpc.getGcpByHeightAsync([{ 'height': i.toString() }]));
           getStakeAsyncList.push(rpc.getEenpByHeightAsync([{ 'height': i.toString() }]));
-          getRewardAsyncList.push(rpc.getStakeRewardDistributionAsync([{ 'height': i.toString() }]));
         }
-        return Promise.all(getBlockAsyncList.concat(getStakeAsyncList).concat(getRewardAsyncList))
+        return Promise.all(getBlockAsyncList.concat(getStakeAsyncList))
       } else {
         Logger.error('Block crawling is up to date.');
       }
@@ -137,8 +131,6 @@ exports.Execute = async function (network_id) {
         var upsertGcpAsyncList = [];
         var updateEenpAsyncList = [];
         var upsertEenpAsyncList = [];
-        var updateRewardAsyncList = [];
-        var upsertRewardAsyncList = [];
         var insertStakeHistoryList = [];
         var upsertTransactionAsyncList = [];
         var checkpoint_height, checkpoint_hash;
@@ -193,14 +185,6 @@ exports.Execute = async function (network_id) {
               })
               Logger.log(`updateEenpAsyncList length: ${updateEenpAsyncList.length}`);
               upsertEenpAsyncList.push(stakeHelper.updateStakes(updateEenpAsyncList, 'eenp', stakeDao, cacheEnabled));
-            } else if (result.result.BlockHashStakeRewardDistributionRuleSetPairs) { // handle split reward distribution
-              if (upsertRewardAsyncList.length > 0) continue;
-              result.result.BlockHashStakeRewardDistributionRuleSetPairs.forEach(pair => {
-                pair.StakeRewardDistributionRuleSet.forEach(s => {
-                  updateRewardAsyncList.push(s);
-                })
-              })
-              upsertRewardAsyncList.push(rewardHelper.updateRewardDistributions(updateRewardAsyncList, rewardDistributionDao, cacheEnabled))
             } else {  //handle block response
               var txs = result.result.transactions;
               const blockInfo = {
@@ -274,11 +258,10 @@ exports.Execute = async function (network_id) {
         Logger.log(`Number of upsert VCP: ${upsertVcpAsyncList.length}`);
         Logger.log(`Number of upsert GCP: ${upsertGcpAsyncList.length}`);
         Logger.log(`Number of upsert EENP: ${upsertEenpAsyncList.length}`);
-        Logger.log(`Number of upsert Reward split distribution: ${upsertRewardAsyncList.length}`);
         Logger.log(`Number of upsert check points: ${upsertCheckpointAsyncList.length}`);
         Logger.log(`Number of upsert TRANSACTIONS: ${upsertTransactionAsyncList.length}`);
         return Promise.all(upsertBlockAsyncList, upsertVcpAsyncList, upsertGcpAsyncList,
-          upsertTransactionAsyncList, upsertCheckpointAsyncList, upsertEenpAsyncList, upsertRewardAsyncList,
+          upsertTransactionAsyncList, upsertCheckpointAsyncList, upsertEenpAsyncList,
           txHelper.updateFees(validTransactionList, progressDao))
       }
     })

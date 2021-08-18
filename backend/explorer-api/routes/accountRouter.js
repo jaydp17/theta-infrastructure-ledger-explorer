@@ -3,7 +3,7 @@ var router = express.Router();
 var bodyParser = require('body-parser');
 var helper = require('../helper/utils');
 
-var accountRouter = (app, accountDao, progressDao, rpc, config) => {
+var accountRouter = (app, accountDao, rpc) => {
   router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get("/account/:address", async (req, res) => {

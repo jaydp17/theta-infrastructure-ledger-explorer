@@ -31,6 +31,7 @@ function main() {
     console.log(err);
     process.exit(1);
   }
+  console.log(config);
 
   app.use(cors());
   app.use(compression());
