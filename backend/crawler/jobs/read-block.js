@@ -294,10 +294,10 @@ exports.Execute = async function (networkId) {
             }
           }
         }
-        if (tokenTxs.length !== 0) {
-          updateTokenList.push(scHelper.updateTokenByTxs(tokenTxs, smartContractDao, tokenDao, tokenSummaryDao,
-            tokenHolderDao, contractMap, chainType));
-        }
+        // if (tokenTxs.length !== 0) {
+        //   updateTokenList.push(scHelper.updateTokenByTxs(tokenTxs, smartContractDao, tokenDao, tokenSummaryDao,
+        //     tokenHolderDao, contractMap, chainType));
+        // }
         if (stakes.vcp.length !== 0) {
           // Update total stake info
           upsertGcpAsyncList.push(stakeHelper.updateTotalStake(stakes, progressDao))
